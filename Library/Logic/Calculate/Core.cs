@@ -1,4 +1,4 @@
-﻿using SwissEphNet;
+using SwissEphNet;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -1149,7 +1149,7 @@ namespace VedAstro.Library
             for (int i = 1; i < countToNextHouse; i++)
             {
                 //get the next house number from the current counted to house
-                houseCountedTo = NextHouseNumber(houseCountedTo);
+                houseCountedTo = (int)NextHouseNumber((HouseName)houseCountedTo);
             }
 
             return houseCountedTo;

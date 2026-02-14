@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace VedAstro.Library
@@ -1140,5 +1140,40 @@ namespace VedAstro.Library
                     }
                 }
             };
+
+        /// <summary>
+        /// Get the main bird activity for the given birth time and current time.
+        /// </summary>
+        public static BirdActivity MainActivity(Time birthTime, Time currentTime)
+        {
+            var birthBird = BirthBird(birthTime);
+            var timeOfDay = IsDayTime(currentTime, birthTime) ? TimeOfDay.Day : TimeOfDay.Night;
+            var dayOfWeek = (DayOfWeek)((int)currentTime.GetStdDateTimeOffset().DateTime.DayOfWeek);
+            var yama = Calculate.BirthYama(currentTime).YamaCount;
+            if (yama < 1 || yama > 5) yama = 1;
+            if (TableData.TryGetValue(timeOfDay, out var dayData) &&
+                dayData.TryGetValue(dayOfWeek, out var yamaData) &&
+                yamaData.TryGetValue(yama, out var birdData) &&
+                birdData.TryGetValue(birthBird, out var activity))
+                return activity;
+            return BirdActivity.Ruling;
+        }
+
+        private static BirdName BirthBird(Time birthTime)
+        {
+            var moonNakshatra = Calculate.PlanetConstellation(PlanetName.Moon, birthTime);
+            var quarter = moonNakshatra.GetQuarter();
+            var nakshatraIndex = (moonNakshatra.GetConstellationNumber() - 1) * 4 + quarter;
+            var birdIndex = (nakshatraIndex - 1) % 5;
+            return (BirdName)birdIndex;
+        }
+
+        private static bool IsDayTime(Time currentTime, Time birthTime)
+        {
+            var sunrise = Calculate.SunriseTime(birthTime);
+            var sunset = Calculate.SunsetTime(birthTime);
+            var current = currentTime.GetStdDateTimeOffset();
+            return current >= sunrise.GetStdDateTimeOffset() && current < sunset.GetStdDateTimeOffset();
+        }
     }
 }

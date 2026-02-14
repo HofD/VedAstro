@@ -218,7 +218,7 @@ namespace VedAstro.Library
             var methodCache = getMethodCache(key.Function);
 
             //if value is in cache return value to caller, end here
-            if (methodCache.TryGetValue(key, out var value))
+            if (methodCache != null && methodCache.TryGetValue(key, out var value))
             {
                 CacheUseCount++; return (T)value;
             }
@@ -314,35 +314,42 @@ namespace VedAstro.Library
         /// </summary>
         private static ConcurrentDictionary<CacheKey, object> getMethodCache(string methodName)
         {
-
-            //if value is in cache return to caller, end here
-            if (_cacheList.TryGetValue(methodName, out var wholeCache))
-            {
-                //if value is null, try again, possible miss with multiple threads
-                if (wholeCache == null)
-                {
-                    //log the cache miss
-                    LibLogger.Debug("Cache said to be loaded, but not here!");
-                    goto Start;
-                }
-                return wholeCache;
-            }
-
-            Start:
-            //if no value found in cache, make new cache for the method 
-            wholeCache = _cacheList[methodName] = new ConcurrentDictionary<CacheKey, object>();
-
-            //return the new cache for the method to caller
-            return wholeCache;
-
+            // Use atomic GetOrAdd to avoid races and null values
+            return _cacheList.GetOrAdd(methodName, _ => new ConcurrentDictionary<CacheKey, object>());
         }
 
         // EXTENSION FUNCTIONS TO GET KEYS OUT OF MEMORY CACHE (USED IN ASTRONOMICAL FUNCTION CACHING)
 
-        private static readonly Func<MemoryCache, object> GetEntriesCollection = Delegate.CreateDelegate(
-            typeof(Func<MemoryCache, object>),
-            typeof(MemoryCache).GetProperty("EntriesCollection", BindingFlags.NonPublic | BindingFlags.Instance).GetGetMethod(true),
-            throwOnBindFailure: true) as Func<MemoryCache, object>;
+        // Bound via reflection in a null-safe static constructor. Some runtimes do not expose the
+        // internal "EntriesCollection" member on MemoryCache; avoid throwing during type init.
+        private static readonly Func<MemoryCache, object> GetEntriesCollection;
+
+        static CacheManager()
+        {
+            try
+            {
+                var prop = typeof(MemoryCache).GetProperty("EntriesCollection", BindingFlags.NonPublic | BindingFlags.Instance);
+                if (prop != null)
+                {
+                    var getter = prop.GetGetMethod(true);
+                    if (getter != null)
+                    {
+                        // Create an open delegate that accepts the MemoryCache instance
+                        GetEntriesCollection = (Func<MemoryCache, object>)Delegate.CreateDelegate(typeof(Func<MemoryCache, object>), getter);
+                    }
+                }
+            }
+            catch
+            {
+                // swallow and fall through to fallback
+            }
+
+            if (GetEntriesCollection == null)
+            {
+                // Provide a clear runtime error if enumeration is attempted on unsupported runtimes.
+                GetEntriesCollection = mc => throw new NotSupportedException("Enumerating IMemoryCache keys is not supported on this runtime. Use a custom key registry or a supported runtime.");
+            }
+        }
 
 
     }

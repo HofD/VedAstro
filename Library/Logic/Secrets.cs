@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 
@@ -20,13 +20,16 @@ namespace VedAstro.Library
             var field = typeof(Secrets).GetField(key, BindingFlags.Static | BindingFlags.NonPublic);
             if (field != null)
             {
-                return (string)field.GetValue(null);
+                var value = (string)field.GetValue(null);
+                if (!string.IsNullOrEmpty(value)) return value;
             }
 
+            // Fallback: read from environment (Azure Functions loads local.settings.json Values as env vars)
+            var envValue = Environment.GetEnvironmentVariable(key);
+            if (!string.IsNullOrEmpty(envValue)) return envValue;
+
             Console.WriteLine($"The key --> '{key}' is missing sweetheart! Contact us for a testing Key --> vedastro.org/Contact.html");
-            //give nice message to caller if missing
             throw new Exception($"The key --> '{key}' is missing sweetheart! Contact us for a testing Key --> vedastro.org/Contact.html");
-            return "";
         }
     }
 }

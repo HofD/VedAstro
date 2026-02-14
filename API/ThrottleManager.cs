@@ -17,6 +17,8 @@ namespace API
         /// </summary>
         public static async Task<string> HandleCall(HttpRequestData incomingRequest, string fullParamString)
         {
+            return fullParamString;
+
             // if browser then let call through
             if (IsBrowser(incomingRequest)) { return fullParamString; }
 

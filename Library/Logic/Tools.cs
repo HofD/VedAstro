@@ -903,8 +903,8 @@ namespace VedAstro.Library
             {
                 //NOTE : must be sample : "-3.9571599,103.8723379"
                 var splitted = locationName.Split(',');
-                double latitude = Convert.ToDouble(splitted[0]);
-                double longitude = Convert.ToDouble(splitted[1]);
+                double latitude = double.Parse(splitted[0], CultureInfo.InvariantCulture);
+                double longitude = double.Parse(splitted[1], CultureInfo.InvariantCulture);
 
                 //NOTE: we preserve lat and long into name as well, since technically
                 //      no location name has a coordinate but a radius. So in that sense,
